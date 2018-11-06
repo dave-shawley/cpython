@@ -2627,6 +2627,23 @@ delta_reduce(PyDateTime_Delta* self, PyObject *Py_UNUSED(ignored))
     return Py_BuildValue("ON", Py_TYPE(self), delta_getstate(self));
 }
 
+static PyObject *
+delta_jsonformat(PyDateTime_Delta* self, PyObject *Py_UNUSED(ignored))
+{
+    int num_seconds = GET_TD_SECONDS(self);
+    int num_minutes = divmod(num_seconds, 60, &num_seconds);
+    int num_hours = divmod(num_minutes, 60, &num_minutes);
+    num_hours += GET_TD_DAYS(self) * 24;
+    if (GET_TD_MICROSECONDS(self)) {
+        return PyUnicode_FromFormat("PT%dH%dM%d.%dS",
+                                    num_hours, num_minutes, num_seconds,
+                                    GET_TD_MICROSECONDS(self));
+    } else {
+        return PyUnicode_FromFormat("PT%dH%dM%dS",
+                                    num_hours, num_minutes, num_seconds);
+    }
+}
+
 #define OFFSET(field)  offsetof(PyDateTime_Delta, field)
 
 static PyMemberDef delta_members[] = {
@@ -2648,6 +2665,9 @@ static PyMethodDef delta_methods[] = {
 
     {"__reduce__", (PyCFunction)delta_reduce, METH_NOARGS,
      PyDoc_STR("__reduce__() -> (cls, state)")},
+
+    {"jsonformat", (PyCFunction)delta_jsonformat, METH_NOARGS,
+     PyDoc_STR("Formatted as an ISO8601 duration.")},
 
     {NULL,      NULL},
 };
@@ -3267,6 +3287,9 @@ static PyMethodDef date_methods[] = {
 
     {"replace",     (PyCFunction)date_replace,      METH_VARARGS | METH_KEYWORDS,
      PyDoc_STR("Return date with new specified fields.")},
+
+    {"jsonformat",  (PyCFunction)date_isoformat,    METH_NOARGS,
+     PyDoc_STR("Return string in ISO 8601 format, YYYY-MM-DD.")},
 
     {"__reduce__", (PyCFunction)date_reduce,        METH_NOARGS,
      PyDoc_STR("__reduce__() -> (cls, state)")},
@@ -4080,6 +4103,12 @@ time_isoformat(PyDateTime_Time *self, PyObject *args, PyObject *kw)
 }
 
 static PyObject *
+time_jsonformat(PyDateTime_Time *self, PyObject *Py_UNUSED(ignored))
+{
+    return _PyObject_CallMethodId((PyObject *)self, &PyId_isoformat, NULL);
+}
+
+static PyObject *
 time_strftime(PyDateTime_Time *self, PyObject *args, PyObject *kw)
 {
     PyObject *result;
@@ -4394,8 +4423,11 @@ static PyMethodDef time_methods[] = {
     {"replace",     (PyCFunction)time_replace,          METH_VARARGS | METH_KEYWORDS,
      PyDoc_STR("Return time with new specified fields.")},
 
-     {"fromisoformat", (PyCFunction)time_fromisoformat, METH_O | METH_CLASS,
+    {"fromisoformat", (PyCFunction)time_fromisoformat,  METH_O | METH_CLASS,
      PyDoc_STR("string -> time from time.isoformat() output")},
+
+    {"jsonformat", (PyCFunction)time_jsonformat,           METH_NOARGS,
+     PyDoc_STR("Return self.isoformat().")},
 
     {"__reduce_ex__", (PyCFunction)time_reduce_ex,        METH_VARARGS,
      PyDoc_STR("__reduce_ex__(proto) -> (cls, state)")},
@@ -5282,6 +5314,30 @@ datetime_isoformat(PyDateTime_DateTime *self, PyObject *args, PyObject *kw)
 }
 
 static PyObject *
+datetime_jsonformat(PyDateTime_DateTime *self, PyObject *Py_UNUSED(ignored))
+{
+    PyObject *result = NULL;
+    char buffer[100];
+
+    result = PyUnicode_FromFormat("%04d-%02d-%02d%c%02d:%02d:%02d.%03d",
+                                  GET_YEAR(self), GET_MONTH(self),
+                                  GET_DAY(self), (int)'T',
+                                  DATE_GET_HOUR(self), DATE_GET_MINUTE(self),
+                                  DATE_GET_SECOND(self),
+                                  DATE_GET_MICROSECOND(self) / 1000);
+    if (!result || !HASTZINFO(self))
+        return result;
+
+    if (format_utcoffset(buffer, sizeof(buffer), ":", self->tzinfo,
+                         (PyObject *)self) < 0) {
+        Py_DECREF(result);
+        return NULL;
+    }
+    PyUnicode_AppendAndDel(&result, PyUnicode_FromString(buffer));
+    return result;
+}
+
+static PyObject *
 datetime_ctime(PyDateTime_DateTime *self, PyObject *Py_UNUSED(ignored))
 {
     return format_ctime((PyDateTime_Date *)self,
@@ -6068,6 +6124,9 @@ static PyMethodDef datetime_methods[] = {
 
     {"astimezone",  (PyCFunction)datetime_astimezone, METH_VARARGS | METH_KEYWORDS,
      PyDoc_STR("tz -> convert to local time in new timezone tz\n")},
+
+    {"jsonformat", (PyCFunction)datetime_jsonformat, METH_NOARGS,
+     PyDoc_STR("Return self.isoformat(self).")},
 
     {"__reduce_ex__", (PyCFunction)datetime_reduce_ex,     METH_VARARGS,
      PyDoc_STR("__reduce_ex__(proto) -> (cls, state)")},

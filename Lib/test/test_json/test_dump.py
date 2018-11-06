@@ -1,3 +1,4 @@
+from datetime import date, datetime, time, timedelta, timezone
 from io import StringIO
 from test.test_json import PyTest, CTest
 
@@ -51,10 +52,44 @@ class TestDump:
         class C:
             def jsonformat(self):
                 return 'hi there'
-        
+
         self.assertEqual(self.dumps({'v': C()}),
                          '{"v": "hi there"}')
 
+    def test_encode_datetime(self):
+        then = datetime(2018, 11, 5, 7, 54, 55, 123456)
+        self.assertEqual(self.dumps({'then': then}),
+                         '{"then": "2018-11-05T07:54:55.123"}')
+
+        then = then.replace(tzinfo=timezone.utc)
+        self.assertEqual(self.dumps({'then': then}),
+                         '{"then": "2018-11-05T07:54:55.123+00:00"}')
+
+    def test_encode_date(self):
+        then = date(2018, 11, 5)
+        self.assertEqual(self.dumps({'then': then}), '{"then": "2018-11-05"}')
+
+    def test_encode_time(self):
+        then = time(7, 54, 55, 123456)
+        self.assertEqual(self.dumps({'then': then}),
+                         '{"then": "07:54:55.123456"}')
+
+        then = then.replace(tzinfo=timezone.utc)
+        self.assertEqual(self.dumps({'then': then}),
+                         '{"then": "07:54:55.123456+00:00"}')
+
+    def test_encode_duration(self):
+        self.assertEqual(
+            self.dumps({
+                'span': timedelta(days=1, hours=23, minutes=59, seconds=59,
+                                  microseconds=999999),
+            }),
+            '{"span": "PT47H59M59.999999S"}')
+        self.assertEqual(
+            self.dumps({
+                'span': timedelta(days=-15, hours=10, microseconds=1234),
+            }),
+            '{"span": "PT-350H0M0.1234S"}')
 
 class TestPyDump(TestDump, PyTest): pass
 

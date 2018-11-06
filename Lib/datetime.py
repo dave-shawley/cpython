@@ -766,6 +766,18 @@ class timedelta:
     def __reduce__(self):
         return (self.__class__, self._getstate())
 
+    # jsonformat support.
+
+    def jsonformat(self):
+        mm, ss = divmod(self._seconds, 60)
+        hh, mm = divmod(mm, 60)
+        hh += self._days * 24
+        if self.microseconds:
+            return 'PT%dH%dM%d.%dS' % (hh, mm, ss, self.microseconds)
+        else:
+            return 'PT%dH%dM%dS' % (hh, mm, ss)
+
+
 timedelta.min = timedelta(-999999999)
 timedelta.max = timedelta(days=999999999, hours=23, minutes=59, seconds=59,
                           microseconds=999999)
@@ -1071,6 +1083,10 @@ class date:
 
     def __reduce__(self):
         return (self.__class__, self._getstate())
+
+    # jsonformat support.
+
+    jsonformat = isoformat
 
 _date_class = date  # so functions w/ args named "date" can get at the class
 
@@ -1479,6 +1495,11 @@ class time:
 
     def __reduce__(self):
         return self.__reduce_ex__(2)
+
+    # jsonformat support.
+
+    def jsonformat(self):
+        return self.isoformat()
 
 _time_class = time  # so functions w/ args named "time" can get at the class
 
@@ -2078,6 +2099,11 @@ class datetime(date):
 
     def __reduce__(self):
         return self.__reduce_ex__(2)
+
+    # jsonformat support.
+
+    def jsonformat(self):
+        return self.isoformat()
 
 
 datetime.min = datetime(1, 1, 1)
