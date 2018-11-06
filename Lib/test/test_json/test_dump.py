@@ -47,6 +47,14 @@ class TestDump:
         d[1337] = "true.dat"
         self.assertEqual(self.dumps(d, sort_keys=True), '{"1337": "true.dat"}')
 
+    def test_encode_jsonformatable_object(self):
+        class C:
+            def jsonformat(self):
+                return 'hi there'
+        
+        self.assertEqual(self.dumps({'v': C()}),
+                         '{"v": "hi there"}')
+
 
 class TestPyDump(TestDump, PyTest): pass
 

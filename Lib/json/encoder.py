@@ -435,8 +435,12 @@ def _make_iterencode(markers, _default, _encoder, _indent, _floatstr,
                 if markerid in markers:
                     raise ValueError("Circular reference detected")
                 markers[markerid] = o
-            o = _default(o)
+            if hasattr(o, 'jsonformat'):
+                o = o.jsonformat()
+            else:
+                o = _default(o)
             yield from _iterencode(o, _current_indent_level)
             if markers is not None:
                 del markers[markerid]
+
     return _iterencode

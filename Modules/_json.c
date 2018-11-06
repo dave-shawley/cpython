@@ -1501,6 +1501,23 @@ encoder_listencode_obj(PyEncoderObject *s, _PyAccu *acc,
         Py_LeaveRecursiveCall();
         return rv;
     }
+    else if (PyObject_HasAttrString(obj, "jsonformat")) {
+        PyObject *to_json = PyObject_GetAttrString(obj, "jsonformat");
+        newobj = PyObject_CallFunctionObjArgs(to_json, NULL);
+        if (Py_EnterRecursiveCall(" while encoding a JSON object")) {
+            Py_CLEAR(newobj);
+            Py_DECREF(to_json);
+            return -1;
+        }
+        rv = encoder_listencode_obj(s, acc, newobj, indent_level);
+        Py_LeaveRecursiveCall();
+        Py_CLEAR(newobj);
+        Py_DECREF(to_json);
+        if (rv) {
+            return -1;
+        }
+        return rv;
+    }
     else {
         PyObject *ident = NULL;
         if (s->markers != Py_None) {
