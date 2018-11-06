@@ -266,6 +266,9 @@ class UUID:
         return '%s-%s-%s-%s-%s' % (
             hex[:8], hex[8:12], hex[12:16], hex[16:20], hex[20:])
 
+    def jsonformat(self):
+        return str(self)
+
     @property
     def bytes(self):
         return self.int.to_bytes(16, 'big')

@@ -1,7 +1,8 @@
 from datetime import date, datetime, time, timedelta, timezone
 from io import StringIO
-from test.test_json import PyTest, CTest
+from uuid import UUID
 
+from test.test_json import PyTest, CTest
 from test.support import bigmemtest, _1G
 
 class TestDump:
@@ -90,6 +91,12 @@ class TestDump:
                 'span': timedelta(days=-15, hours=10, microseconds=1234),
             }),
             '{"span": "PT-350H0M0.1234S"}')
+
+    def test_encode_uuid(self):
+        uuid = UUID('886313E1-3B8A-5372-9B90-0C9AEE199E5D')
+        self.assertEqual(self.dumps({'id': uuid}),
+                         '{"id": "886313e1-3b8a-5372-9b90-0c9aee199e5d"}')
+
 
 class TestPyDump(TestDump, PyTest): pass
 
